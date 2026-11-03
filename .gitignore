@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Data: never commit HackerTube exports or anything fetched from YouTube
+data/
+*.zip
+*.jsonl
+*.npy
+youtube_meta*
+
+# Keys and secrets
+.env
+*.key
+*key*.txt
+.streamlit/secrets.toml
+
+youtube_views.json
+.nerdlore/
+
+# Editors and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

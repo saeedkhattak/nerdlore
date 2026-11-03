@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The "Popular vs remembered" map, drawn on a canvas from real data that charts.zone_map_html puts in
+     __DATA__. View counts are plotted exactly as YouTube returned them; nothing is calculated from them.
+     Thumbnails load from YouTube's image server and are shown unaltered (border only). -->
+<style>
+  :root { --text: #e6edf3; --muted: #8b949e; --line: rgba(255, 255, 255, 0.06); --panel: rgba(255, 255, 255, 0.025);
+          --tip: rgba(13, 17, 23, 0.95); }
+  body.light { --text: #1f2328; --muted: #57606a; --line: rgba(0, 0, 0, 0.08); --panel: rgba(0, 0, 0, 0.025);
+               --tip: rgba(255, 255, 255, 0.97); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; color: var(--text);
+    font: 14px/1.4 "Source Sans Pro", "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; letter-spacing: .08em; }
+  .legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+  .z { padding: 6px 10px; border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: 8px;
+       background: var(--panel); min-width: 0; }
+  .z .top { display: flex; align-items: baseline; gap: 8px; }
+  .z .name { color: var(--c); font-weight: 600; white-space: nowrap; }
+  .z .n { margin-left: auto; font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .z .b { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .plot { position: relative; height: 500px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  canvas { width: 100%; height: 100%; display: block; }
+  .status { position: absolute; top: 8px; right: 18px; font-size: 11px; color: var(--muted); transition: opacity .8s; pointer-events: none; }
+  .tip { position: absolute; pointer-events: none; max-width: 300px; padding: 8px 10px; border-radius: 8px;
+         background: var(--tip); border: 1px solid var(--c, #888); box-shadow: 0 6px 24px rgba(0, 0, 0, .35);
+         font-size: 13px; opacity: 0; transition: opacity .12s; }
+  .tip b { display: block; margin-bottom: 2px; }
+  .tip .m { color: var(--muted); }
+  .tip .go { color: var(--c); font-size: 12px; margin-top: 4px; }
+  @media (max-width: 640px) { .legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } .plot { height: 420px; } }
+</style>
+</head>
+<body>
+<div class="legend" id="legend"></div>
+<div class="plot" id="plot">
+  <canvas id="c" aria-label="Map of videos by YouTube views and HN recommenders"></canvas>
+  <div class="status mono" id="status"></div>
+  <div class="tip" id="tip"><b id="tt"></b><div class="m" id="tc"></div><div id="tn"></div><div class="go">Click to watch on YouTube ↗</div></div>
+</div>
+<script>
+(() => {
+  const D = __DATA__;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  try {  // follow the app's real background
+    const app = parent.document.querySelector(".stApp") || parent.document.body;
+    const [r, g, b] = getComputedStyle(app).backgroundColor.match(/\d+/g).map(Number);
+    document.body.classList.toggle("light", 0.299 * r + 0.587 * g + 0.114 * b > 140);
+  } catch (e) {}
+  const css = n => getComputedStyle(document.body).getPropertyValue(n).trim();
+  const TEXT = css("--text"), MUTED = css("--muted"), LINE = css("--line");
+  const rgb = hex => { const n = parseInt(hex.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+  const COLORS = D.colors.map(rgb);
+  const mix = (a, b, t) => [0, 1, 2].map(i => Math.round(a[i] + (b[i] - a[i]) * t));
+  const ease = t => t < 0 ? 0 : t > 1 ? 1 : 1 - Math.pow(1 - t, 3);
+  const fmt = n => n.toLocaleString("en-US");
+  const hash = s => { let x = 7; for (const ch of s) x = (x * 31 + ch.charCodeAt(0)) | 0; return ((x >>> 0) % 1000) / 1000; };
+
+  /* ---- legend with live counts ---- */
+  const counts = D.zones.map((_, i) => D.videos.filter(v => v.z === i).length);
+  document.getElementById("legend").innerHTML = D.zones.map((z, i) =>
+    `<div class="z" style="--c:${D.colors[i]}"><div class="top"><span class="name">${z}</span>` +
+    `<span class="n">${fmt(counts[i])}</span></div><div class="b">${D.blurbs[i]}</div></div>`).join("");
+
+  /* ---- what changed since the last time this map was drawn (kept for this browser tab only) ---- */
+  const KEY = "nerdlore:zone-map";
+  let prev = null;
+  try { prev = JSON.parse(sessionStorage.getItem(KEY)); } catch (e) {}
+  try {
+    sessionStorage.setItem(KEY, JSON.stringify({ recs: D.recs, views: D.views,
+      z: Object.fromEntries(D.videos.map(v => [v.i, v.z])), v: Object.fromEntries(D.videos.map(v => [v.i, v.v])) }));
+  } catch (e) {}
+  let changed = 0;
+  for (const v of D.videos) {
+    v.jit = (hash(v.i) - 0.5) * 0.6;
+    v.pz = prev && prev.z && v.i in prev.z ? prev.z[v.i] : v.z;
+    v.pv = prev && prev.v && v.i in prev.v ? prev.v[v.i] : v.v;
+    v.changed = v.pz !== v.z;
+    if (v.changed) changed++;
+    v.ph = hash(v.i + "p") * 6.28;
+  }
+  const status = document.getElementById("status");
+  status.textContent = !prev ? `MAPPING ${fmt(D.videos.length)} VIDEOS`
+    : changed ? `${fmt(changed)} VIDEO${changed === 1 ? "" : "S"} CHANGED ZONE`
+    : `${fmt(D.videos.length)} VIDEOS · NO ZONE CHANGES`;
+  setTimeout(() => { status.style.opacity = 0.45; }, 4500);
+
+  /* ---- geometry ---- */
+  const canvas = document.getElementById("c"), plot = document.getElementById("plot");
+  const PAD = { l: 52, r: 18, t: 30, b: 44 };
+  const views = D.videos.map(v => Math.max(1, v.v)), recs = D.videos.map(v => v.r);
+  const lx0 = Math.log10(Math.min(...views, D.views) / 1.8), lx1 = Math.log10(Math.max(...views, D.views) * 1.8);
+  const y0 = Math.min(...recs, D.recs) - 0.9, y1 = Math.max(...recs, D.recs) + 0.9;
+  let W = 0, H = 0, ctx;
+  function fit() {
+    const r = canvas.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = r.width * dpr; canvas.height = r.height * dpr; W = r.width; H = r.height;
+    ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  const X = v => PAD.l + (Math.log10(Math.max(1, v)) - lx0) / (lx1 - lx0) * (W - PAD.l - PAD.r);
+  const Y = r => PAD.t + (1 - (r - y0) / (y1 - y0)) * (H - PAD.t - PAD.b);
+
+  /* ---- featured thumbnails ---- */
+  const TW = 96, TH = 54;
+  const byId = Object.fromEntries(D.videos.map(v => [v.i, v]));
+  const thumbs = [];
+  D.featured.forEach((ids, zi) => ids.forEach((id, k) => {
+    const img = new Image(); img.referrerPolicy = "no-referrer";
+    img.src = `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+    thumbs.push({ v: byId[id], zi, k, n: ids.length, img, ph: hash(id) * 6.28, pop: 0 });
+  }));
+
+  /* ---- interaction ---- */
+  let mouse = null, hover = null;
+  const tip = document.getElementById("tip");
+  plot.addEventListener("mousemove", e => { const r = plot.getBoundingClientRect(); mouse = { x: e.clientX - r.left, y: e.clientY - r.top }; });
+  plot.addEventListener("mouseleave", () => { mouse = null; });
+  plot.addEventListener("click", () => { if (hover) window.open(hover.u, "_blank", "noopener"); });
+  function showTip(v) {
+    tip.style.setProperty("--c", D.colors[v.z]);
+    document.getElementById("tt").textContent = v.t;
+    document.getElementById("tc").textContent = `${v.c} · ${D.zones[v.z]}`;
+    document.getElementById("tn").textContent = `${v.r} HN recommenders · ${fmt(v.v)} YouTube views`;
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = Math.min(Math.max(8, mouse.x + 14), W - tw - 8) + "px";
+    tip.style.top = (mouse.y + 16 + th > H ? mouse.y - th - 12 : mouse.y + 16) + "px";
+    tip.style.opacity = 1;
+  }
+
+  /* ---- drawing ---- */
+  const start = performance.now();
+  const TRANS = prev ? 1100 : 0;            // thresholds and changed dots animate from the previous state
+  const REVEAL = prev ? 0 : 1400;           // first visit: a scan reveals the dots left to right
+
+  function frame(now) {
+    const t = reduce ? 1e9 : now - start;
+    const k = TRANS ? ease(t / TRANS) : 1;
+    ctx.clearRect(0, 0, W, H);
+    const X0 = PAD.l, X1 = W - PAD.r, Y0 = PAD.t, Y1 = H - PAD.b;
+
+    // thresholds (animated in log space for views)
+    const pvLog = Math.log10(prev ? prev.views : D.views), cvLog = Math.log10(D.views);
+    const tv = Math.pow(10, pvLog + (cvLog - pvLog) * k);
+    const tr = (prev ? prev.recs : D.recs) + (D.recs - (prev ? prev.recs : D.recs)) * k;
+    const tx = Math.min(Math.max(X(tv), X0), X1), ty = Math.min(Math.max(Y(tr - 0.5), Y0), Y1);
+    const rects = [[X0, Y0, tx, ty], [tx, Y0, X1, ty], [tx, ty, X1, Y1], [X0, ty, tx, Y1]];
+
+    // zone fills + labels
+    rects.forEach(([a, b, c, d], i) => {
+      const g = ctx.createLinearGradient(a, b, c, d);
+      g.addColorStop(0, rgba(COLORS[i], 0.10)); g.addColorStop(1, rgba(COLORS[i], 0.03));
+      ctx.fillStyle = g; ctx.fillRect(a, b, c - a, d - b);
+    });
+    // grid + ticks
+    ctx.strokeStyle = LINE; ctx.lineWidth = 1; ctx.fillStyle = MUTED; ctx.font = "11px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    for (let p = Math.ceil(lx0); p <= lx1; p++) {
+      const x = X(Math.pow(10, p)); ctx.beginPath(); ctx.moveTo(x, Y0); ctx.lineTo(x, Y1); ctx.stroke();
+      const lab = p >= 9 ? `${Math.pow(10, p - 9)}B` : p >= 6 ? `${Math.pow(10, p - 6)}M` : p >= 3 ? `${Math.pow(10, p - 3)}k` : `${Math.pow(10, p)}`;
+      ctx.fillText(lab, x, Y1 + 16);
+    }
+    ctx.textAlign = "right";
+    for (let r = Math.ceil(y0); r <= y1; r += 2) {
+      const y = Y(r); ctx.beginPath(); ctx.moveTo(X0, y); ctx.lineTo(X1, y); ctx.stroke(); ctx.fillText(r, X0 - 8, y + 4);
+    }
+    ctx.font = "12px system-ui, sans-serif"; ctx.fillStyle = MUTED;
+    ctx.fillText("YouTube views (from YouTube)  →", X1, H - 8);
+    ctx.save(); ctx.translate(14, Y0); ctx.rotate(-Math.PI / 2); ctx.textAlign = "right";
+    ctx.fillText("HN recommenders (HackerTube)  →", 0, 0); ctx.restore();
+
+    // threshold lines
+    ctx.setLineDash([4, 6]); ctx.lineDashOffset = -t * 0.01; ctx.strokeStyle = MUTED;
+    ctx.beginPath(); ctx.moveTo(tx, Y0); ctx.lineTo(tx, Y1); ctx.moveTo(X0, ty); ctx.lineTo(X1, ty); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    ctx.font = "600 11px ui-monospace, Consolas, monospace";
+    [[X0 + 10, Y0 + 18, "left"], [X1 - 10, Y0 + 18, "right"], [X1 - 10, Y1 - 10, "right"], [X0 + 10, Y1 - 10, "left"]]
+      .forEach(([x, y, al], i) => { ctx.textAlign = al; ctx.fillStyle = rgba(COLORS[i], 0.95); ctx.fillText(D.zones[i].toUpperCase(), x, y); });
+
+    // scan line: one reveal pass on first visit, then a slow sweep every 9 s
+    const revealX = REVEAL ? X0 + (X1 - X0) * Math.min(1, t / REVEAL) : X1 + 100;
+    const sweep = reduce ? -1 : ((t - REVEAL) % 9000) / 9000;
+    const scanX = t < REVEAL ? revealX : sweep >= 0 && sweep < 0.4 ? X0 + (X1 - X0) * (sweep / 0.4) : -999;
+    if (scanX > X0 && scanX < X1) {
+      const g = ctx.createLinearGradient(scanX - 60, 0, scanX, 0);
+      g.addColorStop(0, "rgba(167,139,250,0)"); g.addColorStop(1, "rgba(167,139,250,0.22)");
+      ctx.fillStyle = g; ctx.fillRect(scanX - 60, Y0, 60, Y1 - Y0);
+      ctx.strokeStyle = "rgba(167,139,250,0.7)"; ctx.beginPath(); ctx.moveTo(scanX, Y0); ctx.lineTo(scanX, Y1); ctx.stroke();
+    }
+
+    // dots
+    hover = null; let best = 81;
+    for (const v of D.videos) {
+      const vv = Math.pow(10, Math.log10(Math.max(1, v.pv)) + (Math.log10(Math.max(1, v.v)) - Math.log10(Math.max(1, v.pv))) * k);
+      v.x = X(vv); v.y = Y(v.r + v.jit);
+      if (v.x > revealX) continue;
+      const pop = REVEAL ? ease((revealX - v.x) / 40) : 1;
+      const col = v.changed ? mix(COLORS[v.pz], COLORS[v.z], k) : COLORS[v.z];
+      const lit = Math.abs(v.x - scanX) < 26 ? 0.35 : 0;
+      const tw = reduce ? 0 : 0.12 * Math.sin(t * 0.002 + v.ph);
+      ctx.fillStyle = rgba(col, Math.min(1, (0.72 + lit + tw) * pop));
+      ctx.beginPath(); ctx.arc(v.x, v.y, (v.z === 0 ? 4.2 : 3.4) * (0.6 + 0.4 * pop), 0, 6.283); ctx.fill();
+      if (v.changed && t < TRANS + 2400) {  // ping ring on videos that moved zone
+        const p = ((t % 1200) / 1200);
+        ctx.strokeStyle = rgba(COLORS[v.z], (1 - p) * 0.9); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(v.x, v.y, 4 + p * 14, 0, 6.283); ctx.stroke();
+      }
+      if (mouse) { const d = (mouse.x - v.x) ** 2 + (mouse.y - v.y) ** 2; if (d < best) { best = d; hover = v; } }
+    }
+
+    // floating thumbnails, tethered to their dots
+    let hoverThumb = null;
+    for (const th of thumbs) {
+      const [a, b, c, d] = rects[th.zi], zw = c - a, zh = d - b;
+      const cols = Math.max(0, Math.floor((zw - 16) / (TW + 14))), rows = zh > TH * 2 + 60 ? 2 : zh > TH + 36 ? 1 : 0;
+      if (th.k >= cols * rows || t < REVEAL) { th.pop = Math.max(0, th.pop - 0.08); if (!th.pop) continue; }
+      else th.pop = Math.min(1, th.pop + 0.04);
+      const used = Math.min(th.n, cols * rows), perRow = Math.min(cols, used) || 1;
+      const col = th.k % perRow, row = Math.floor(th.k / perRow);
+      const cx = a + zw * (col + 0.5) / perRow, cy = b + (rows > 1 ? zh * (row ? 0.72 : 0.32) : zh * 0.5);
+      const drift = reduce ? 0 : 1;
+      const x = Math.min(Math.max(cx + Math.sin(t * 0.00045 + th.ph) * 12 * drift, a + TW / 2 + 6), c - TW / 2 - 6);
+      const y = Math.min(Math.max(cy + Math.cos(t * 0.0004 + th.ph * 1.3) * 8 * drift, b + TH / 2 + 22), d - TH / 2 - 10);
+      const over = mouse && Math.abs(mouse.x - x) < TW / 2 && Math.abs(mouse.y - y) < TH / 2;
+      if (over) hoverThumb = th;
+      const s = (over ? 1.18 : 1) * (0.85 + 0.15 * th.pop), w = TW * s, h = TH * s, C = COLORS[th.zi];
+      ctx.globalAlpha = th.pop;
+      // tether
+      ctx.setLineDash([2, 4]); ctx.strokeStyle = rgba(C, 0.6); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(th.v.x, th.v.y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = rgba(C, 0.9); ctx.beginPath(); ctx.arc(th.v.x, th.v.y, 7, 0, 6.283); ctx.stroke();
+      // frame + image
+      ctx.shadowColor = rgba(C, 0.9); ctx.shadowBlur = over ? 22 : 12;
+      ctx.fillStyle = "#000"; ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, 6); ctx.fill(); ctx.shadowBlur = 0;
+      if (th.img.complete && th.img.naturalWidth) {
+        ctx.save(); ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, 6); ctx.clip();
+        ctx.drawImage(th.img, x - w / 2, y - h / 2, w, h); ctx.restore();
+      }
+      ctx.strokeStyle = rgba(C, over ? 1 : 0.85); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, 6); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    if (hoverThumb) hover = hoverThumb.v;
+    if (hover && mouse) { showTip(hover); plot.style.cursor = "pointer"; }
+    else { tip.style.opacity = 0; plot.style.cursor = "crosshair"; }
+    requestAnimationFrame(frame);
+  }
+  new ResizeObserver(fit).observe(plot);
+  fit(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

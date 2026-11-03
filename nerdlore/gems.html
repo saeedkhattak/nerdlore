@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- The "Hidden gems" vault. charts.gems_html fills __DATA__ with the gems, in order (fewest YouTube views first).
+     View counts are shown exactly as YouTube returned them; the meters only draw them on a log scale.
+     Thumbnails come from YouTube's image server and are not altered. -->
+<style>
+  :root { --text: #e6edf3; --muted: #8b949e; --line: rgba(255, 255, 255, .08); --panel: rgba(255, 255, 255, .03);
+          --panel2: rgba(255, 255, 255, .05); --hn: #ff7a3d; --yt: #3dd6ff; --gem: #a78bfa; }
+  body.light { --text: #1f2328; --muted: #57606a; --line: rgba(0, 0, 0, .09); --panel: rgba(0, 0, 0, .025);
+               --panel2: rgba(0, 0, 0, .04); --hn: #e8590c; --yt: #0891b2; --gem: #7c3aed; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; color: var(--text);
+    font: 14px/1.45 "Source Sans Pro", "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; letter-spacing: .08em; }
+  a { color: inherit; }
+  @property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+  @keyframes spin { to { --a: 360deg; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes sweep { from { transform: translateX(-120%); } to { transform: translateX(320%); } }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  /* ---------- featured gem ---------- */
+  .feat { position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 22px;
+          padding: 16px; border-radius: 14px; background: var(--panel); isolation: isolate; overflow: hidden;
+          animation: rise .6s cubic-bezier(.2, .7, .2, 1) both; }
+  .feat::before { content: ""; position: absolute; inset: 0; border-radius: 14px; padding: 1px; z-index: -1;
+    background: conic-gradient(from var(--a), var(--hn), var(--gem), var(--yt), var(--gem), var(--hn));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; animation: spin 8s linear infinite; }
+  .feat::after { content: ""; position: absolute; top: 0; bottom: 0; width: 30%; z-index: -1; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, .07), transparent); animation: sweep 7s ease-in-out infinite; }
+  .shot { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: #000; }
+  .shot img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s; }
+  .shot:hover img { transform: scale(1.03); }
+  .shot .play { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transition: opacity .25s;
+                background: radial-gradient(circle, rgba(0, 0, 0, .35), transparent 60%); }
+  .shot:hover .play { opacity: 1; }
+  .play span { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+               background: rgba(0, 0, 0, .6); border: 1px solid rgba(255, 255, 255, .5); color: #fff; font-size: 24px; }
+  .lock { position: absolute; width: 22px; height: 22px; border: 2px solid var(--gem); transition: all .5s; }
+  .lock.tl { top: 8px; left: 8px; border-right: 0; border-bottom: 0; } .lock.tr { top: 8px; right: 8px; border-left: 0; border-bottom: 0; }
+  .lock.bl { bottom: 8px; left: 8px; border-right: 0; border-top: 0; } .lock.br { bottom: 8px; right: 8px; border-left: 0; border-top: 0; }
+  .feat.locking .lock.tl, .feat.locking .lock.bl { left: 26%; } .feat.locking .lock.tr, .feat.locking .lock.br { right: 26%; }
+  .feat.locking .lock.tl, .feat.locking .lock.tr { top: 22%; } .feat.locking .lock.bl, .feat.locking .lock.br { bottom: 22%; }
+  .eyebrow { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--gem); }
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gem); box-shadow: 0 0 10px var(--gem); animation: pulse 2s infinite; }
+  .info { display: flex; flex-direction: column; min-width: 0; }
+  .info h2 { font-size: clamp(19px, 2.1vw, 26px); line-height: 1.2; margin: 6px 0 4px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .why { margin: 12px 0 0; }
+  .why .k, .quote .k { font-size: 10.5px; color: var(--muted); display: block; margin-bottom: 2px; }
+  .quote { margin: 10px 0 0; padding: 8px 12px; border-left: 2px solid var(--hn); background: var(--panel2); border-radius: 0 8px 8px 0; font-style: italic; }
+  .meters { display: grid; gap: 8px; margin: 14px 0 0; }
+  .meter .row { display: flex; justify-content: space-between; font-size: 12.5px; }
+  .meter .row b { font-variant-numeric: tabular-nums; }
+  .bar { height: 6px; border-radius: 6px; background: var(--panel2); overflow: hidden; margin-top: 3px; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 6px; transition: width 1s cubic-bezier(.2, .7, .2, 1); }
+  .bar.hn i { background: linear-gradient(90deg, rgba(255, 122, 61, .4), var(--hn)); box-shadow: 0 0 10px var(--hn); }
+  .bar.yt i { background: linear-gradient(90deg, rgba(61, 214, 255, .4), var(--yt)); box-shadow: 0 0 10px var(--yt); }
+  .actions { display: flex; gap: 8px; margin-top: auto; padding-top: 14px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-weight: 600;
+         text-decoration: none; font-size: 13.5px; border: 1px solid var(--line); transition: all .2s; }
+  .btn.primary { background: var(--hn); border-color: var(--hn); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.1); box-shadow: 0 0 18px -4px var(--hn); }
+  .btn.ghost:hover { border-color: var(--muted); }
+
+  /* ---------- grid ---------- */
+  .gridhead { display: flex; justify-content: space-between; align-items: baseline; margin: 22px 2px 10px; }
+  .gridhead .t { font-size: 11px; color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+  .card { position: relative; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: 0;
+          border-radius: 12px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; isolation: isolate;
+          transition: transform .25s, box-shadow .25s, border-color .25s; animation: rise .55s cubic-bezier(.2, .7, .2, 1) both; }
+  .card::before { content: ""; position: absolute; inset: -1px; border-radius: 12px; padding: 1px; z-index: 2; opacity: 0;
+    background: conic-gradient(from var(--a), var(--hn), var(--gem), var(--yt), var(--hn));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; transition: opacity .3s; animation: spin 4s linear infinite; pointer-events: none; }
+  .card:hover, .card:focus-visible { transform: translateY(-3px); box-shadow: 0 12px 28px -12px rgba(167, 139, 250, .55); outline: none; }
+  .card:hover::before, .card:focus-visible::before, .card.on::before { opacity: 1; }
+  .card .thumb { position: relative; aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
+  .card .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .thumb::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .12), transparent); transform: translateX(-140%); }
+  .card:hover .thumb::after { animation: sweep 1.1s ease-out; }
+  .rank { position: absolute; top: 8px; left: 8px; padding: 2px 8px; border-radius: 6px; font-size: 11px; color: #fff;
+          background: rgba(0, 0, 0, .7); border: 1px solid rgba(167, 139, 250, .7); backdrop-filter: blur(4px); }
+  .card .body { padding: 10px 12px 12px; }
+  .card h3 { font-size: 14.5px; line-height: 1.3; margin: 0 0 4px; display: -webkit-box; -webkit-line-clamp: 2;
+             -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+  .card .meta { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .nums { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .card .nums b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .card .nums .h b { color: var(--hn); } .card .nums .y b { color: var(--yt); }
+  .card .nums .key { padding: 0 6px; margin: 0 -6px; border-radius: 5px; outline: 1px solid var(--line); background: var(--panel2); }
+  .card .bars { display: grid; gap: 4px; margin-top: 6px; }
+  .card .bar { height: 4px; margin: 0; }
+  @media (max-width: 720px) { .feat { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<section class="feat" id="feat" aria-live="polite">
+  <a class="shot" id="shot" target="_blank" rel="noopener">
+    <img id="fimg" alt="">
+    <span class="play"><span>▶</span></span>
+    <i class="lock tl"></i><i class="lock tr"></i><i class="lock bl"></i><i class="lock br"></i>
+  </a>
+  <div class="info">
+    <div class="eyebrow mono"><span class="dot"></span><span id="frank"></span></div>
+    <h2 id="ftitle"></h2>
+    <div class="meta" id="fmeta"></div>
+    <div class="why" id="fwhyBox"><span class="k mono">WHY HN RECOMMENDS IT</span><span id="fwhy"></span></div>
+    <div class="quote" id="fquoteBox"><span class="k mono">AN HN COMMENTER</span><span id="fquote"></span></div>
+    <div class="meters">
+      <div class="meter"><div class="row"><span>HN recommenders <span class="mono" style="font-size:10px;color:var(--muted)">HACKERTUBE</span></span><b id="frecs"></b></div><div class="bar hn"><i id="frecsBar"></i></div></div>
+      <div class="meter"><div class="row"><span>YouTube views <span class="mono" style="font-size:10px;color:var(--muted)">YOUTUBE</span></span><b id="fviews"></b></div><div class="bar yt"><i id="fviewsBar"></i></div></div>
+    </div>
+    <div class="actions">
+      <a class="btn primary" id="fwatch" target="_blank" rel="noopener">▶ Watch on YouTube</a>
+      <a class="btn ghost" id="fhn" target="_blank" rel="noopener">Read the HN comment ↗</a>
+    </div>
+  </div>
+</section>
+<div class="gridhead"><span class="t mono" id="gcount"></span><span class="t">The highlighted number on each card is the one it is ranked by · click a card to feature it</span></div>
+<div class="grid" id="grid"></div>
+<script>
+(() => {
+  const D = __DATA__;
+  try {
+    const app = parent.document.querySelector(".stApp") || parent.document.body;
+    const [r, g, b] = getComputedStyle(app).backgroundColor.match(/\d+/g).map(Number);
+    document.body.classList.toggle("light", 0.299 * r + 0.587 * g + 0.114 * b > 140);
+  } catch (e) {}
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fmt = n => n.toLocaleString("en-US");
+  const $ = id => document.getElementById(id);
+  const maxR = Math.max(...D.gems.map(g => g.r), D.maxRecs || 1);
+  const logMax = Math.log10(Math.max(10, D.maxViews || 10));
+  const recPct = r => Math.max(4, 100 * r / maxR);
+  const viewPct = v => Math.max(3, 100 * Math.log10(Math.max(1, v)) / logMax);
+  const thumb = (id, q) => `https://i.ytimg.com/vi/${id}/${q}.jpg`;
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  function countUp(node, to) {
+    if (reduce) { node.textContent = fmt(to); return; }
+    const t0 = performance.now(), dur = 900;
+    const step = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      node.textContent = fmt(Math.round(to * e)); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+
+  let current = -1;
+  function feature(i, scroll) {
+    if (i === current) return;
+    current = i;
+    const g = D.gems[i], f = $("feat");
+    f.classList.remove("locking"); void f.offsetWidth; f.classList.add("locking");
+    setTimeout(() => f.classList.remove("locking"), 650);
+    $("fimg").src = thumb(g.i, "hqdefault"); $("fimg").alt = g.t;
+    $("shot").href = g.u; $("fwatch").href = g.u;
+    $("frank").textContent = `#${i + 1} · ${D.rankBy === "recs" ? "MOST HN RECOMMENDERS" : "FEWEST YOUTUBE VIEWS"} · ${g.type.toUpperCase()}`;
+    $("ftitle").textContent = g.t;
+    $("fmeta").textContent = [g.c, g.year ? `uploaded ${g.year}` : null, g.fy ? `first on HN ${g.fy}` : null, g.topic]
+      .filter(Boolean).join(" · ");
+    $("fwhy").textContent = g.why; $("fwhyBox").style.display = g.why ? "" : "none";
+    $("fquote").textContent = g.q ? `“${g.q}”` : ""; $("fquoteBox").style.display = g.q ? "" : "none";
+    $("fhn").style.display = g.hn ? "" : "none"; if (g.hn) $("fhn").href = g.hn;
+    countUp($("frecs"), g.r); countUp($("fviews"), g.v);
+    $("frecsBar").style.width = "0"; $("fviewsBar").style.width = "0";
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      $("frecsBar").style.width = recPct(g.r) + "%"; $("fviewsBar").style.width = viewPct(g.v) + "%"; }));
+    document.querySelectorAll(".card").forEach(c => c.classList.toggle("on", +c.dataset.i === i));
+    if (scroll) f.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }
+
+  const grid = $("grid");
+  D.gems.forEach((g, i) => {
+    const card = el("button", "card"); card.dataset.i = i; card.style.animationDelay = `${Math.min(i, 20) * 40}ms`;
+    card.setAttribute("aria-label", `Feature ${g.t}`);
+    const th = el("div", "thumb"); const img = el("img"); img.loading = "lazy"; img.alt = ""; img.src = thumb(g.i, "mqdefault");
+    th.append(img, el("span", "rank mono", `#${i + 1}`));
+    const body = el("div", "body");
+    body.append(el("h3", null, g.t), el("div", "meta", `${g.c} · ${g.type}`));
+    const nums = el("div", "nums");
+    const h = el("span", D.rankBy === "recs" ? "h key" : "h"); h.append(el("b", null, fmt(g.r)), document.createTextNode(" HN recs"));
+    const y = el("span", D.rankBy === "views" ? "y key" : "y"); y.append(el("b", null, fmt(g.v)), document.createTextNode(" views"));
+    (D.rankBy === "recs" ? h : y).title = "The number this list is ranked by";
+    nums.append(h, y);
+    const bars = el("div", "bars");
+    for (const [cls, pct] of [["hn", recPct(g.r)], ["yt", viewPct(g.v)]]) {
+      const b = el("div", `bar ${cls}`), fill = el("i"); fill.style.width = pct + "%"; b.append(fill); bars.append(b);
+    }
+    body.append(nums, bars);
+    card.append(th, body);
+    card.addEventListener("click", () => feature(i, true));
+    grid.append(card);
+  });
+  $("gcount").textContent = `${D.gems.length} GEM${D.gems.length === 1 ? "" : "S"} · RANKED BY ${D.rankBy === "recs" ? "MOST HN RECOMMENDERS" : "FEWEST YOUTUBE VIEWS"}`;
+  if (D.gems.length) feature(0, false);
+
+  // Grow the frame (and Streamlit's box around it) to fit, so the page scrolls instead of this box.
+  const resize = () => { try { if (frameElement) { const h = document.documentElement.scrollHeight + "px"; frameElement.style.height = h; frameElement.parentElement.style.height = h; } } catch (e) {} };
+  new ResizeObserver(resize).observe(document.body); resize();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- "Trusted channels" explorer. charts.channels_html fills __DATA__ with HackerTube data only (no YouTube numbers).
+     Thumbnails come from YouTube's image server, unaltered. -->
+<style>
+  :root { --text: #e6edf3; --muted: #8b949e; --line: rgba(255, 255, 255, .08); --panel: rgba(255, 255, 255, .03);
+          --panel2: rgba(255, 255, 255, .055); --hn: #ff7a3d; --yt: #3dd6ff; --gem: #a78bfa; }
+  body.light { --text: #1f2328; --muted: #57606a; --line: rgba(0, 0, 0, .09); --panel: rgba(0, 0, 0, .025);
+               --panel2: rgba(0, 0, 0, .045); --hn: #e8590c; --yt: #0891b2; --gem: #7c3aed; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; color: var(--text);
+    font: 14px/1.45 "Source Sans Pro", "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; letter-spacing: .08em; }
+  button { font: inherit; color: inherit; }
+  @property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+  @keyframes spin { to { --a: 360deg; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .wrap { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.3fr); gap: 16px; align-items: start; }
+  .list { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 8px; }
+  .lh { display: flex; justify-content: space-between; padding: 4px 8px 8px; font-size: 10.5px; color: var(--muted); }
+  .row { width: 100%; display: grid; grid-template-columns: 22px 34px minmax(0, 1fr) 44px; align-items: center; gap: 10px;
+         padding: 7px 8px; border: 0; border-radius: 10px; background: transparent; cursor: pointer; text-align: left;
+         transition: background .2s; animation: rise .45s both; }
+  .row:hover { background: var(--panel2); }
+  .row.on { background: color-mix(in srgb, var(--hn) 10%, transparent); box-shadow: inset 3px 0 0 var(--hn); }
+  .row .n { font-size: 11px; color: var(--muted); text-align: right; }
+  .av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff;
+        background: linear-gradient(135deg, hsl(var(--h) 70% 55%), hsl(calc(var(--h) + 50) 70% 40%)); }
+  .row .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .sub { font-size: 11.5px; color: var(--muted); }
+  .row .bar { height: 4px; border-radius: 4px; background: var(--panel2); margin-top: 4px; overflow: hidden; }
+  .row .bar i { display: block; height: 100%; width: 0; border-radius: 4px; background: linear-gradient(90deg, color-mix(in srgb, var(--hn) 40%, transparent), var(--hn));
+                transition: width 1s cubic-bezier(.2, .7, .2, 1); }
+  .row .sc { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--hn); text-align: right; }
+
+  .detail { position: relative; border-radius: 14px; padding: 16px; background: var(--panel); isolation: isolate; overflow: hidden; }
+  .detail::before { content: ""; position: absolute; inset: 0; border-radius: 14px; padding: 1px; z-index: -1;
+    background: conic-gradient(from var(--a), var(--hn), var(--gem), var(--yt), var(--gem), var(--hn));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: spin 10s linear infinite; }
+  .dh { display: flex; align-items: center; gap: 14px; }
+  .dh .av { width: 58px; height: 58px; font-size: 20px; box-shadow: 0 0 0 3px var(--panel), 0 0 0 5px color-mix(in srgb, var(--hn) 60%, transparent), 0 0 24px -4px var(--hn); }
+  .dh h2 { margin: 0; font-size: 22px; line-height: 1.15; }
+  .dh .rank { font-size: 11px; color: var(--hn); }
+  .dh a { margin-left: auto; flex: none; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); text-decoration: none; color: inherit; font-weight: 600; font-size: 13px; }
+  .dh a:hover { border-color: var(--muted); }
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0 6px; }
+  .stat { padding: 10px 12px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); }
+  .stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 11.5px; color: var(--muted); }
+  .note { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+  .strip-h { font-size: 10.5px; color: var(--muted); margin: 6px 0 8px; }
+  .strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .vid { display: block; text-decoration: none; color: inherit; border-radius: 10px; overflow: hidden; background: var(--panel2);
+         border: 1px solid var(--line); transition: transform .2s, box-shadow .2s; animation: rise .5s both; }
+  .vid:hover { transform: translateY(-3px); box-shadow: 0 10px 24px -12px var(--hn); }
+  .vid .th { position: relative; aspect-ratio: 16 / 9; background: #000; }
+  .vid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .vid .chip { position: absolute; top: 6px; left: 6px; font-size: 10.5px; padding: 1px 6px; border-radius: 5px; color: #fff; background: rgba(0, 0, 0, .7); }
+  .vid .b { padding: 7px 9px 9px; }
+  .vid .t { font-size: 12.5px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+  .vid .m { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .vid .m b { color: var(--hn); }
+  .anim { animation: rise .45s both; }
+  @media (max-width: 820px) { .wrap { grid-template-columns: 1fr; } .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="list" role="listbox" aria-label="Channels">
+    <div class="lh mono"><span>CHANNEL · VIDEOS</span><span>AVG SCORE</span></div>
+    <div id="rows"></div>
+  </div>
+  <section class="detail" id="detail" aria-live="polite"></section>
+</div>
+<script>
+(() => {
+  const D = __DATA__;
+  try {
+    const app = parent.document.querySelector(".stApp") || parent.document.body;
+    const [r, g, b] = getComputedStyle(app).backgroundColor.match(/\d+/g).map(Number);
+    document.body.classList.toggle("light", 0.299 * r + 0.587 * g + 0.114 * b > 140);
+  } catch (e) {}
+  const fmt = n => n.toLocaleString("en-US");
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const hue = s => { let x = 0; for (const ch of s) x = (x * 31 + ch.charCodeAt(0)) | 0; return Math.abs(x) % 360; };
+  const initials = s => s.replace(/[^\p{L}\p{N} ]/gu, "").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
+  const avatar = name => { const a = el("div", "av", initials(name)); a.style.setProperty("--h", hue(name)); return a; };
+  const maxScore = Math.max(...D.channels.map(c => c.score));
+
+  const rows = document.getElementById("rows");
+  const buttons = D.channels.map((c, i) => {
+    const b = el("button", "row"); b.style.animationDelay = `${i * 35}ms`; b.setAttribute("role", "option");
+    const text = el("div"); text.append(el("div", "name", c.name), el("div", "sub", `${c.videos} videos`));
+    const bar = el("div", "bar"), fill = el("i"); bar.append(fill); text.append(bar);
+    b.append(el("span", "n mono", i + 1), avatar(c.name), text, el("span", "sc", c.score.toFixed(2)));
+    setTimeout(() => { fill.style.width = `${100 * c.score / maxScore}%`; }, 80 + i * 35);
+    b.onclick = () => show(i);
+    rows.append(b);
+    return b;
+  });
+
+  let cur = -1;
+  function show(i) {
+    if (i === cur || i < 0 || i >= D.channels.length) return;
+    cur = i; const c = D.channels[i];
+    buttons.forEach((b, k) => { b.classList.toggle("on", k === i); b.setAttribute("aria-selected", k === i); });
+    const d = document.getElementById("detail"); d.replaceChildren();
+    const head = el("div", "dh anim");
+    const t = el("div"); t.append(el("div", "rank mono", `#${i + 1} OF ${D.channels.length} TRUSTED CHANNELS`), el("h2", null, c.name));
+    const find = el("a", null, "Find on YouTube ↗"); find.href = c.url; find.target = "_blank"; find.rel = "noopener";
+    find.title = "HackerTube only has channel names, so this opens a YouTube channel search";
+    head.append(avatar(c.name), t, find);
+    const stats = el("div", "stats anim"); stats.style.animationDelay = "80ms";
+    for (const [v, label] of [[c.score.toFixed(2), "average HackerTube score"], [fmt(c.videos), "videos on HackerTube"],
+                              [fmt(c.recs), "HN recommenders, all videos"]]) {
+      const s = el("div", "stat"); s.append(el("b", null, v), el("span", null, label)); stats.append(s);
+    }
+    const note = el("p", "note anim",
+      "The score is HackerTube's own ranking score for each video, from its Hacker News data (HackerTube doesn't publish the formula). This is the average over the channel's videos.");
+    note.style.animationDelay = "120ms";
+    const sh = el("div", "strip-h mono", "ITS TOP VIDEOS ON HACKERTUBE · CLICK TO WATCH");
+    const strip = el("div", "strip");
+    c.top.forEach((v, k) => {
+      const a = el("a", "vid"); a.href = v.u; a.target = "_blank"; a.rel = "noopener"; a.style.animationDelay = `${160 + k * 60}ms`;
+      const th = el("div", "th"), img = el("img"); img.loading = "lazy"; img.alt = ""; img.src = `https://i.ytimg.com/vi/${v.i}/mqdefault.jpg`;
+      th.append(img, el("span", "chip mono", `#${k + 1}`));
+      const body = el("div", "b"); body.append(el("div", "t", v.t));
+      const m = el("div", "m"); m.append(el("b", null, v.r), document.createTextNode(` HN recommenders · ${v.type}${v.fy ? ` · on HN since ${v.fy}` : ""}`));
+      body.append(m); a.append(th, body); strip.append(a);
+    });
+    d.append(head, stats, note, sh, strip);
+  }
+  addEventListener("keydown", e => {
+    if (e.key === "ArrowDown") { e.preventDefault(); show(cur + 1); buttons[cur].focus(); }
+    if (e.key === "ArrowUp") { e.preventDefault(); show(cur - 1); buttons[cur].focus(); }
+  });
+  show(0);
+
+  // Grow the frame (and Streamlit's box around it) to fit, so the page scrolls instead of this box.
+  const resize = () => { try { if (frameElement) { const h = document.documentElement.scrollHeight + "px";
+    frameElement.style.height = h; frameElement.parentElement.style.height = h; } } catch (e) {} };
+  new ResizeObserver(resize).observe(document.body); resize();
+})();
+</script>
+</body>
+</html>

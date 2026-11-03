@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- "Picks by year" time machine. charts.years_html fills __DATA__ with the selected videos: HN recommenders
+     (HackerTube), and view counts and upload dates exactly as YouTube returned them. Bars count videos per year. -->
+<style>
+  :root { --text: #e6edf3; --muted: #8b949e; --line: rgba(255, 255, 255, .08); --panel: rgba(255, 255, 255, .03);
+          --panel2: rgba(255, 255, 255, .055); --hn: #ff7a3d; --yt: #3dd6ff; --gem: #a78bfa; }
+  body.light { --text: #1f2328; --muted: #57606a; --line: rgba(0, 0, 0, .09); --panel: rgba(0, 0, 0, .025);
+               --panel2: rgba(0, 0, 0, .045); --hn: #e8590c; --yt: #0891b2; --gem: #7c3aed; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; color: var(--text);
+    font: 14px/1.45 "Source Sans Pro", "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; letter-spacing: .08em; }
+  button { font: inherit; color: inherit; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes glitch { 0% { opacity: 0; filter: blur(6px); letter-spacing: .3em; } 60% { opacity: 1; filter: blur(0); } 100% { letter-spacing: -.01em; } }
+
+  .machine { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 12px 14px 8px; }
+  .bar1 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; }
+  .seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); }
+  .seg button { border: 0; background: transparent; padding: 5px 12px; border-radius: 7px; cursor: pointer; font-size: 13px; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: color-mix(in srgb, var(--hn) 18%, transparent); color: var(--text); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hn) 55%, transparent); }
+  .ctl { display: flex; gap: 6px; }
+  .ctl button { height: 32px; min-width: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; }
+  .ctl button:hover { border-color: var(--muted); }
+  .ctl .play[aria-pressed="true"] { border-color: var(--hn); color: var(--hn); }
+  .explain { font-size: 12.5px; color: var(--muted); margin: 8px 2px 4px; }
+  #tl { width: 100%; height: 150px; display: block; cursor: pointer; touch-action: none; }
+
+  .yearhead { display: flex; align-items: baseline; gap: 14px; margin: 16px 2px 10px; flex-wrap: wrap; }
+  .yearhead .y { font-size: 44px; font-weight: 800; line-height: 1; color: var(--hn); text-shadow: 0 0 28px color-mix(in srgb, var(--hn) 45%, transparent); }
+  .yearhead .y.anim { animation: glitch .55s ease-out; }
+  .yearhead .s { color: var(--muted); }
+  .yearhead .s b { color: var(--text); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .card { display: block; text-decoration: none; color: inherit; border-radius: 12px; overflow: hidden; background: var(--panel);
+          border: 1px solid var(--line); transition: transform .2s, box-shadow .2s, border-color .2s; animation: rise .45s both; }
+  .card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--hn) 60%, transparent); box-shadow: 0 12px 26px -14px var(--hn); }
+  .card .th { position: relative; aspect-ratio: 16 / 9; background: #000; }
+  .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .rank { position: absolute; top: 7px; left: 7px; font-size: 11px; padding: 1px 7px; border-radius: 6px; color: #fff; background: rgba(0, 0, 0, .72); border: 1px solid color-mix(in srgb, var(--hn) 70%, transparent); }
+  .card .b { padding: 9px 11px 11px; }
+  .card .t { font-weight: 600; font-size: 13.5px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+  .card .c { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .nums { display: flex; gap: 10px; margin-top: 7px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .card .nums b { font-variant-numeric: tabular-nums; }
+  .card .h b { color: var(--hn); } .card .v b { color: var(--yt); }
+  .card .d { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .more { margin: 12px auto 0; display: block; padding: 7px 16px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel2); cursor: pointer; }
+  .more:hover { border-color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<section class="machine">
+  <div class="bar1">
+    <div class="seg" role="group" aria-label="Which year">
+      <button id="mUp" aria-pressed="true">Uploaded to YouTube</button>
+      <button id="mHn" aria-pressed="false">First recommended on HN</button>
+    </div>
+    <div class="ctl">
+      <button id="prev" aria-label="Previous year">◀</button>
+      <button class="play mono" id="play" aria-pressed="false">▶ PLAY YEARS</button>
+      <button id="next" aria-label="Next year">▶</button>
+    </div>
+  </div>
+  <div class="explain" id="explain"></div>
+  <canvas id="tl" aria-label="Number of videos per year; click a year"></canvas>
+</section>
+<div class="yearhead"><span class="y mono" id="yy"></span><span class="s" id="ys"></span></div>
+<div class="grid" id="grid"></div>
+<button class="more" id="more" hidden></button>
+<script>
+(() => {
+  const D = __DATA__;
+  try {
+    const app = parent.document.querySelector(".stApp") || parent.document.body;
+    const [r, g, b] = getComputedStyle(app).backgroundColor.match(/\d+/g).map(Number);
+    document.body.classList.toggle("light", 0.299 * r + 0.587 * g + 0.114 * b > 140);
+  } catch (e) {}
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const css = n => getComputedStyle(document.body).getPropertyValue(n).trim();
+  const C = { hn: css("--hn"), muted: css("--muted"), line: css("--line"), text: css("--text") };
+  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+  const fmt = n => n.toLocaleString("en-US");
+  const $ = id => document.getElementById(id);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const EXPLAIN = {
+    uy: "Each bar counts your videos by the year they were uploaded to YouTube (date from YouTube). Pick a year to see its most-recommended videos.",
+    fy: "Each bar counts your videos by the year someone first linked them in an HN comment (HackerTube data). A video is often years older than its first HN mention.",
+  };
+  let mode = "uy", years = [], counts = {}, sel = null, showAll = false;
+
+  function regroup() {
+    counts = {};
+    for (const v of D.videos) if (v[mode]) counts[v[mode]] = (counts[v[mode]] || 0) + 1;
+    const ys = Object.keys(counts).map(Number);
+    years = ys.length ? Array.from({ length: Math.max(...ys) - Math.min(...ys) + 1 }, (_, k) => Math.min(...ys) + k) : [];
+    if (!counts[sel]) sel = ys.reduce((best, y) => (counts[y] > (counts[best] || 0) ? y : best), ys[0]);
+    $("explain").textContent = EXPLAIN[mode];
+    $("mUp").setAttribute("aria-pressed", mode === "uy"); $("mHn").setAttribute("aria-pressed", mode === "fy");
+  }
+
+  /* ---------- timeline ---------- */
+  const tl = $("tl"); let ctx, W = 0, H = 0, hover = null, grow = 0;
+  const PAD = { l: 8, r: 8, t: 22, b: 22 };
+  function fit() {
+    const r = tl.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+    tl.width = r.width * dpr; tl.height = r.height * dpr; W = r.width; H = r.height;
+    ctx = tl.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  const slot = () => (W - PAD.l - PAD.r) / Math.max(1, years.length);
+  const yearAt = x => years[Math.max(0, Math.min(years.length - 1, Math.floor((x - PAD.l) / slot())))];
+  function draw(t) {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, W, H);
+    grow = Math.min(1, grow + 0.04); const k = reduce ? 1 : 1 - Math.pow(1 - grow, 3);
+    const max = Math.max(1, ...Object.values(counts)), s = slot(), bw = Math.max(3, s * 0.62), base = H - PAD.b;
+    years.forEach((y, i) => {
+      const n = counts[y] || 0, h = (base - PAD.t) * (n / max) * k, x = PAD.l + i * s + (s - bw) / 2;
+      const on = y === sel, hov = y === hover;
+      const g = ctx.createLinearGradient(0, base - h, 0, base);
+      g.addColorStop(0, rgba(C.hn, on ? 1 : hov ? 0.75 : 0.45)); g.addColorStop(1, rgba(C.hn, on ? 0.35 : 0.12));
+      ctx.fillStyle = g; if (on) { ctx.shadowColor = C.hn; ctx.shadowBlur = 18; }
+      ctx.beginPath(); ctx.roundRect(x, base - h, bw, Math.max(h, n ? 2 : 0), [4, 4, 0, 0]); ctx.fill(); ctx.shadowBlur = 0;
+      if (on || hov) { ctx.fillStyle = on ? C.hn : C.text; ctx.font = "600 11px ui-monospace, Consolas, monospace"; ctx.textAlign = "center";
+                       ctx.fillText(n, x + bw / 2, base - h - 6); }
+      const every = s < 26 ? 5 : s < 40 ? 2 : 1;
+      if (on || y % every === 0) { ctx.fillStyle = on ? C.hn : C.muted; ctx.font = `${on ? "700 " : ""}11px system-ui, sans-serif`;
+                                  ctx.textAlign = "center"; ctx.fillText(y, x + bw / 2, H - 6); }
+    });
+    // scrub head
+    const i = years.indexOf(sel);
+    if (i >= 0) { const x = PAD.l + i * s + s / 2; ctx.strokeStyle = rgba(C.hn, 0.55); ctx.setLineDash([3, 4]); ctx.beginPath();
+                  ctx.moveTo(x, 4); ctx.lineTo(x, base); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(PAD.l, base + .5); ctx.lineTo(W - PAD.r, base + .5); ctx.stroke();
+  }
+  let dragging = false;
+  const pick = e => { const r = tl.getBoundingClientRect(); const y = yearAt(e.clientX - r.left); if (counts[y]) choose(y); };
+  tl.addEventListener("pointerdown", e => { dragging = true; stopPlay(); pick(e); });
+  addEventListener("pointerup", () => { dragging = false; });
+  tl.addEventListener("pointermove", e => { const r = tl.getBoundingClientRect(); hover = yearAt(e.clientX - r.left); if (dragging) pick(e); });
+  tl.addEventListener("pointerleave", () => { hover = null; });
+
+  /* ---------- year cards ---------- */
+  function choose(y) { if (y === sel) return; sel = y; showAll = false; render(); }
+  function render() {
+    const list = D.videos.filter(v => v[mode] === sel).sort((a, b) => b.r - a.r || b.v - a.v);
+    const yy = $("yy"); yy.textContent = sel ?? "—"; yy.classList.remove("anim"); void yy.offsetWidth; yy.classList.add("anim");
+    $("ys").replaceChildren();
+    if (sel != null) {
+      const s = $("ys"); s.append(el("b", null, fmt(list.length)), document.createTextNode(` ${D.kinds} video${list.length === 1 ? "" : "s"} `),
+        document.createTextNode(mode === "uy" ? "uploaded this year" : "first recommended on HN this year"),
+        document.createTextNode(" · ranked by HN recommenders"));
+    }
+    const shown = showAll ? list : list.slice(0, 12), grid = $("grid"); grid.replaceChildren();
+    shown.forEach((v, k) => {
+      const a = el("a", "card"); a.href = v.u; a.target = "_blank"; a.rel = "noopener"; a.style.animationDelay = `${Math.min(k, 16) * 35}ms`;
+      const th = el("div", "th"), img = el("img"); img.loading = "lazy"; img.alt = ""; img.src = `https://i.ytimg.com/vi/${v.i}/mqdefault.jpg`;
+      th.append(img, el("span", "rank mono", `#${k + 1}`));
+      const b = el("div", "b"); b.append(el("div", "t", v.t), el("div", "c", v.c));
+      const nums = el("div", "nums");
+      const h = el("span", "h"); h.append(el("b", null, v.r), document.createTextNode(" HN recs"));
+      const w = el("span", "v"); w.append(el("b", null, fmt(v.v)), document.createTextNode(" YouTube views"));
+      nums.append(h, w);
+      b.append(nums, el("div", "d", [v.pub ? `uploaded ${v.pub}` : null, v.fy ? `first on HN ${v.fy}` : null].filter(Boolean).join(" · ")));
+      a.append(th, b); grid.append(a);
+    });
+    const more = $("more"); more.hidden = list.length <= 12;
+    more.textContent = showAll ? "Show fewer" : `Show all ${fmt(list.length)}`;
+    if (reduce) draw(0);
+  }
+  $("more").onclick = () => { showAll = !showAll; render(); };
+  const setMode = m => { if (m === mode) return; mode = m; stopPlay(); regroup(); grow = 0; render(); };
+  $("mUp").onclick = () => setMode("uy"); $("mHn").onclick = () => setMode("fy");
+  const step = d => { const ys = years.filter(y => counts[y]); const i = ys.indexOf(sel); if (ys.length) choose(ys[(i + d + ys.length) % ys.length]); };
+  $("prev").onclick = () => { stopPlay(); step(-1); }; $("next").onclick = () => { stopPlay(); step(1); };
+  addEventListener("keydown", e => { if (e.key === "ArrowLeft") $("prev").click(); if (e.key === "ArrowRight") $("next").click(); });
+
+  /* ---------- play through the years ---------- */
+  let timer = null;
+  function stopPlay() { clearInterval(timer); timer = null; $("play").setAttribute("aria-pressed", false); $("play").textContent = "▶ PLAY YEARS"; }
+  $("play").onclick = () => {
+    if (timer) return stopPlay();
+    const ys = years.filter(y => counts[y]); if (!ys.length) return;
+    $("play").setAttribute("aria-pressed", true); $("play").textContent = "❚❚ PAUSE";
+    if (sel === ys[ys.length - 1]) choose(ys[0]);
+    timer = setInterval(() => { const i = ys.indexOf(sel); if (i >= ys.length - 1) stopPlay(); else choose(ys[i + 1]); }, 2200);
+  };
+
+  /* ---------- go ---------- */
+  regroup(); fit(); render();
+  const loop = t => { draw(t); requestAnimationFrame(loop); };
+  if (reduce) draw(0); else requestAnimationFrame(loop);
+  const resize = () => { fit(); if (reduce) draw(0);
+    try { if (frameElement) { const h = document.documentElement.scrollHeight + "px";
+      frameElement.style.height = h; frameElement.parentElement.style.height = h; } } catch (e) {} };
+  new ResizeObserver(resize).observe(document.body); resize();
+})();
+</script>
+</body>
+</html>

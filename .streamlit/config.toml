@@ -1,0 +1,14 @@
+[browser]
+# No usage statistics sent to Streamlit.
+gatherUsageStats = false
+
+[server]
+# Local only by default.
+address = "localhost"
+maxUploadSize = 100
+
+[theme]
+base = "dark"
+primaryColor = "#ff7a3d"
+# Streamlit's default is 16; a bit smaller fits more of the sidebar on screen.
+baseFontSize = 14

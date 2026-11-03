@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="660" viewBox="0 0 1200 660" role="img" aria-labelledby="t d">
+  <title id="t">How NerdLore works</title>
+  <desc id="d">Two data sources, the HackerTube export and the YouTube Data API, flow into the NerdLore Streamlit app running on your own computer. The app saves your key, the zip and view counts in a folder in your home directory, deletes view counts after 30 days, and shows seven interactive pages in your browser.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#c9cfdd"/>
+    </marker>
+    <marker id="ao" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#ff7a3d"/>
+    </marker>
+    <marker id="ac" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#3dd6ff"/>
+    </marker>
+    <marker id="av" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#a78bfa"/>
+    </marker>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity=".04"/>
+    </pattern>
+    <style>
+      .h { font: 700 19px 'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif; fill: #f4f6fb; }
+      .b { font: 400 14.5px 'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif; fill: #b8c0d2; }
+      .s { font: 400 13px 'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif; fill: #8b93a7; }
+      .m { font: 600 12px ui-monospace,SFMono-Regular,Consolas,monospace; letter-spacing: 2px; }
+      .f { font: 600 14px ui-monospace,SFMono-Regular,Consolas,monospace; fill: #f4f6fb; }
+      .card { fill: #161b2b; stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="660" rx="22" fill="#0b0e17"/>
+  <rect width="1200" height="660" rx="22" fill="url(#grid)"/>
+  <text x="40" y="52" class="m" fill="#a78bfa">HOW NERDLORE WORKS</text>
+  <text x="40" y="84" class="h" style="font-size:26px">Two public signals in, everything else stays on your computer</text>
+
+  <!-- sources -->
+  <text x="40" y="140" class="m" fill="#8b93a7">ON THE INTERNET</text>
+  <rect x="40" y="156" width="270" height="150" rx="14" class="card" stroke="#ff7a3d" stroke-opacity=".6"/>
+  <rect x="40" y="156" width="6" height="150" rx="3" fill="#ff7a3d"/>
+  <text x="62" y="186" class="m" fill="#ff7a3d">SIGNAL A</text>
+  <text x="62" y="212" class="h">HackerTube export</text>
+  <text x="62" y="238" class="b">Every YouTube video HN</text>
+  <text x="62" y="258" class="b">commenters recommended</text>
+  <text x="62" y="284" class="s">hackertube-data.zip · ODC-By 1.0</text>
+
+  <rect x="40" y="346" width="270" height="150" rx="14" class="card" stroke="#3dd6ff" stroke-opacity=".6"/>
+  <rect x="40" y="346" width="6" height="150" rx="3" fill="#3dd6ff"/>
+  <text x="62" y="376" class="m" fill="#3dd6ff">SIGNAL B</text>
+  <text x="62" y="402" class="h">YouTube Data API v3</text>
+  <text x="62" y="428" class="b">View counts and upload</text>
+  <text x="62" y="448" class="b">dates, shown as returned</text>
+  <text x="62" y="474" class="s">uses your own free API key</text>
+
+  <text x="40" y="540" class="s">Nothing else is contacted.</text>
+  <text x="40" y="560" class="s">No accounts, no tracking, no server.</text>
+
+  <!-- your computer boundary -->
+  <rect x="360" y="122" width="810" height="500" rx="18" fill="#a78bfa" fill-opacity=".035" stroke="#a78bfa" stroke-opacity=".55" stroke-dasharray="7 7" stroke-width="1.5"/>
+  <text x="384" y="150" class="m" fill="#a78bfa">YOUR COMPUTER</text>
+
+  <!-- app -->
+  <rect x="384" y="166" width="440" height="300" rx="14" class="card" stroke="#a78bfa" stroke-opacity=".5"/>
+  <text x="406" y="198" class="h">NerdLore · Streamlit app</text>
+  <text x="406" y="220" class="s">streamlit run app.py</text>
+  <g>
+    <rect x="406" y="236" width="396" height="48" rx="10" fill="#ff7a3d" fill-opacity=".10"/>
+    <text x="422" y="265" class="f">data.py</text><text x="540" y="265" class="b">loads and checks the zip</text>
+    <rect x="406" y="292" width="396" height="48" rx="10" fill="#3dd6ff" fill-opacity=".09"/>
+    <text x="422" y="321" class="f">youtube.py</text><text x="540" y="321" class="b">fetches raw view counts</text>
+    <rect x="406" y="348" width="396" height="48" rx="10" fill="#a78bfa" fill-opacity=".12"/>
+    <text x="422" y="377" class="f">analysis.py</text><text x="540" y="377" class="b">filters and picks videos</text>
+    <rect x="406" y="404" width="396" height="48" rx="10" fill="#a78bfa" fill-opacity=".12"/>
+    <text x="422" y="433" class="f">charts.py</text><text x="540" y="433" class="b">fills the interactive pages</text>
+  </g>
+
+  <!-- local store -->
+  <rect x="384" y="500" width="440" height="100" rx="14" class="card" stroke="#8b93a7" stroke-opacity=".5"/>
+  <text x="406" y="530" class="f" style="fill:#c9cfdd">~/.nerdlore</text>
+  <text x="530" y="530" class="s">only when opened on localhost</text>
+  <text x="406" y="556" class="b">your key (only if you press Save) · last zip</text>
+  <text x="406" y="580" class="b">view counts, deleted after 30 days</text>
+
+  <!-- browser -->
+  <rect x="868" y="166" width="280" height="434" rx="14" class="card" stroke="#c9cfdd" stroke-opacity=".35"/>
+  <circle cx="890" cy="188" r="5" fill="#ff5f57"/><circle cx="907" cy="188" r="5" fill="#febc2e"/><circle cx="924" cy="188" r="5" fill="#28c840"/>
+  <text x="944" y="193" class="s">localhost:8501</text>
+  <line x1="868" y1="206" x2="1148" y2="206" stroke="#ffffff" stroke-opacity=".08"/>
+  <text x="890" y="236" class="h">Your browser</text>
+  <text x="890" y="258" class="s">seven interactive pages</text>
+  <g class="b">
+    <rect x="890" y="276" width="236" height="34" rx="8" fill="#ff7a3d" fill-opacity=".14"/>
+    <text x="904" y="298" style="fill:#ffb08a">Same praise, different reach</text>
+    <text x="904" y="336">Popular vs remembered</text>
+    <text x="904" y="370">Trusted channels</text>
+    <text x="904" y="404">Picks by year</text>
+    <text x="904" y="438">HN’s inside jokes</text>
+    <text x="904" y="472" style="fill:#d6ccff">Hidden gems</text>
+    <text x="904" y="506">About</text>
+  </g>
+  <text x="890" y="560" class="s">The download list holds HackerTube</text>
+  <text x="890" y="578" class="s">data and links, never view counts</text>
+
+  <!-- arrows -->
+  <path d="M310 231 C 350 231, 360 260, 404 260" fill="none" stroke="#ff7a3d" stroke-width="2" marker-end="url(#ao)"/>
+  <rect x="312" y="208" width="78" height="20" rx="6" fill="#0b0e17"/><text x="318" y="222" class="s" style="fill:#ffb08a">you upload</text>
+  <path d="M404 312 C 360 312, 350 405, 312 410" fill="none" stroke="#3dd6ff" stroke-width="2" marker-end="url(#ac)" stroke-dasharray="6 5"/>
+  <path d="M312 430 C 355 430, 365 330, 404 326" fill="none" stroke="#3dd6ff" stroke-width="2" marker-end="url(#ac)"/>
+  <rect x="312" y="456" width="120" height="20" rx="6" fill="#0b0e17"/><text x="318" y="470" class="s" style="fill:#9be9ff">key out, views in</text>
+  <path d="M824 316 H 866" fill="none" stroke="#c9cfdd" stroke-width="2" marker-end="url(#a)"/>
+  <path d="M604 468 V 498" fill="none" stroke="#8b93a7" stroke-width="2" marker-end="url(#a)" marker-start="url(#a)"/>
+</svg>

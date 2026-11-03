@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Landing explainer for app.py. Self-contained: no external scripts, fonts or data.
+     The dots are an illustration, not real HackerTube or YouTube numbers. -->
+<style>
+  :root {
+    --text: #e6edf3; --muted: #8b949e; --faint: #484f58;
+    --line: rgba(255, 255, 255, 0.07); --card: rgba(255, 255, 255, 0.025);
+    --hn: #ff7a3d; --yt: #3dd6ff; --gem: #a78bfa; --quiet: #6e7681;
+  }
+  body.light {
+    --text: #1f2328; --muted: #57606a; --faint: #afb8c1;
+    --line: rgba(0, 0, 0, 0.08); --card: rgba(0, 0, 0, 0.025);
+    --hn: #e8590c; --yt: #0891b2; --gem: #7c3aed; --quiet: #8c959f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; color: var(--text);
+    font: 15px/1.5 "Source Sans Pro", "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .mono { font-family: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; letter-spacing: .08em; }
+
+  .boot { opacity: 0; transform: translateY(8px); animation: boot .7s cubic-bezier(.2, .7, .2, 1) forwards; }
+  .d1 { animation-delay: .05s } .d2 { animation-delay: .2s } .d3 { animation-delay: .35s } .d4 { animation-delay: .5s }
+  @keyframes boot { to { opacity: 1; transform: none; } }
+
+  header { padding: 4px 2px 18px; }
+  .eyebrow { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gem);
+    box-shadow: 0 0 10px var(--gem); animation: blink 2.4s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  h1 { font-size: clamp(24px, 3.2vw, 34px); line-height: 1.15; margin: 10px 0 10px; font-weight: 700; letter-spacing: -.01em; }
+  h1 .hn { color: var(--hn); } h1 .yt { color: var(--yt); }
+  h1 .both { background: linear-gradient(90deg, var(--hn), var(--gem) 50%, var(--yt));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { color: var(--muted); max-width: 820px; margin: 0; font-size: 16px; }
+  .lede b { color: var(--text); font-weight: 600; }
+
+  /* ---- two signals + fusion core ---- */
+  .fusion { position: relative; display: grid; grid-template-columns: 1fr 210px 1fr; gap: 0; margin-bottom: 18px; }
+  #streams { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .card { position: relative; z-index: 1; padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--card); backdrop-filter: blur(2px); }
+  .card::before, .card::after { content: ""; position: absolute; width: 12px; height: 12px; border: 2px solid var(--accent); }
+  .card::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-top-left-radius: 10px; }
+  .card::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-bottom-right-radius: 10px; }
+  .card.hn { --accent: var(--hn); } .card.yt { --accent: var(--yt); }
+  .tag { font-size: 10.5px; color: var(--accent); }
+  .card h3 { margin: 4px 0 2px; font-size: 18px; }
+  .q { margin: 0 0 8px; color: var(--text); font-style: italic; }
+  .card ul { margin: 0 0 10px; padding: 0; list-style: none; color: var(--muted); font-size: 13.5px; }
+  .card li { padding-left: 14px; position: relative; }
+  .card li::before { content: "›"; position: absolute; left: 0; color: var(--accent); }
+  .blind { font-size: 12.5px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 8px; }
+  .blind b { color: var(--text); font-weight: 600; }
+  .core { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; text-align: center; padding-bottom: 8px; }
+  .core .name { font-size: 11px; color: var(--gem); }
+  .core .what { font-size: 12.5px; color: var(--muted); max-width: 170px; }
+
+  /* ---- the map ---- */
+  .map { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px; background: var(--card); }
+  .map-head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+  .map-head .title { font-size: 11px; color: var(--muted); }
+  .map-head .note { font-size: 11px; color: var(--faint); }
+  .plot { position: relative; height: 300px; cursor: crosshair; }
+  #map { width: 100%; height: 100%; display: block; }
+  .panel { display: flex; flex-direction: column; gap: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: inherit; font-size: 12.5px; color: var(--muted); background: transparent; border: 1px solid var(--line);
+    border-radius: 999px; padding: 3px 10px; cursor: pointer; transition: all .2s; }
+  .chip:hover { color: var(--text); border-color: var(--faint); }
+  .chip[aria-pressed="true"] { color: var(--text); border-color: var(--zc); box-shadow: 0 0 0 1px var(--zc) inset, 0 0 14px -4px var(--zc); }
+  .readout { border-left: 2px solid var(--zc); padding: 2px 0 2px 12px; transition: border-color .3s; min-height: 160px; }
+  .readout .k { font-size: 10.5px; color: var(--zc); }
+  .readout h4 { margin: 2px 0 4px; font-size: 20px; }
+  .readout .line1 { margin: 0 0 6px; font-weight: 600; }
+  .readout .line2 { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+  .readout .where { font-size: 12.5px; color: var(--muted); }
+  .readout .where b { color: var(--text); font-weight: 600; }
+
+  /* ---- steps ---- */
+  .steps { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .step { flex: 1 1 180px; display: flex; gap: 10px; align-items: center; padding: 10px 14px;
+    border: 1px solid var(--line); border-radius: 10px; font-size: 14px; color: var(--muted); }
+  .step .n { font-size: 12px; color: var(--hn); }
+  .step b { color: var(--text); font-weight: 600; }
+
+  @media (max-width: 760px) {
+    .fusion { grid-template-columns: 1fr; gap: 10px; }
+    .core { display: none; } #streams { display: none; }
+    .map { grid-template-columns: 1fr; } .readout { min-height: 0; } .plot { height: 240px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .boot { animation: none; opacity: 1; transform: none; } .eyebrow .dot { animation: none; } }
+</style>
+</head>
+<body>
+
+<header class="boot d1">
+  <div class="eyebrow mono"><span class="dot"></span>HN MEMORY × YOUTUBE REACH</div>
+  <h1><span class="hn">Hacker News remembers.</span> <span class="yt">YouTube counts.</span><br><span class="both">See both at once.</span></h1>
+  <p class="lede">HackerTube tracks which videos Hacker News commenters have recommended over nearly 20 years.
+    YouTube tracks how many people watched them. Each answers a different question, and neither can see the
+    other's answer. <b>NerdLore puts the two side by side</b>, so you can find the talks engineers swear
+    by that most people have never seen.</p>
+</header>
+
+<section class="fusion boot d2" id="fusion">
+  <canvas id="streams" aria-hidden="true"></canvas>
+  <div class="card hn" id="cardHn">
+    <div class="tag mono">SIGNAL A · HACKERTUBE</div>
+    <h3>What Hacker News remembers</h3>
+    <p class="q">“Which videos do engineers keep recommending, years later?”</p>
+    <ul>
+      <li>How many different HN commenters recommended each video</li>
+      <li>Comments from 2007 to today</li>
+      <li>Labels: talk, lecture, joke, news…</li>
+    </ul>
+    <div class="blind"><b>Can't see:</b> how many people actually watched.</div>
+  </div>
+  <div class="core">
+    <div class="name mono">NERDLORE</div>
+    <div class="what">joins both signals, video by video</div>
+  </div>
+  <div class="card yt" id="cardYt">
+    <div class="tag mono">SIGNAL B · YOUTUBE</div>
+    <h3>What the crowd watches</h3>
+    <p class="q">“How many people pressed play?”</p>
+    <ul>
+      <li>Each video's view count, exactly as YouTube reports it</li>
+      <li>Upload date</li>
+      <li>Fetched live with your own API key</li>
+    </ul>
+    <div class="blind"><b>Can't see:</b> whether it was worth watching.</div>
+  </div>
+</section>
+
+<section class="map boot d3">
+  <div class="map-head">
+    <div class="title mono">THE MAP · HOVER OR TAP A ZONE</div>
+    <div class="note">Illustration only. Your real map is in the “Popular vs remembered” tab.</div>
+  </div>
+  <div class="plot" id="plot"><canvas id="map" aria-hidden="true"></canvas></div>
+  <div class="panel">
+    <div class="chips" role="group" aria-label="Zones">
+      <button class="chip" data-zone="gems">Hidden gems</button>
+      <button class="chip" data-zone="classics">Shared classics</button>
+      <button class="chip" data-zone="crowd">Crowd hits</button>
+      <button class="chip" data-zone="quiet">Quiet corner</button>
+      <button class="chip" data-zone="pairs">Same praise</button>
+    </div>
+    <div class="readout" id="readout" aria-live="polite">
+      <div class="k mono" id="rk"></div>
+      <h4 id="rt"></h4>
+      <p class="line1" id="r1"></p>
+      <p class="line2" id="r2"></p>
+      <div class="where" id="rw"></div>
+    </div>
+  </div>
+</section>
+
+<section class="steps boot d4">
+  <div class="step"><span class="n mono">01</span><span><b>Get the zip</b> from hackertube.org and upload it in the sidebar</span></div>
+  <div class="step"><span class="n mono">02</span><span><b>Paste your YouTube API key</b> (free to create)</span></div>
+  <div class="step"><span class="n mono">03</span><span>Press <b>Run analysis</b></span></div>
+</section>
+
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  try {  // follow the app's real background (Streamlit's reported theme can disagree with what is shown)
+    const app = parent.document.querySelector(".stApp") || parent.document.body;
+    const [r, g, b] = getComputedStyle(app).backgroundColor.match(/\d+/g).map(Number);
+    document.body.classList.toggle("light", 0.299 * r + 0.587 * g + 0.114 * b > 140);
+  } catch (e) { /* not same-origin: keep the dark palette */ }
+  const cssVar = name => getComputedStyle(document.body).getPropertyValue(name).trim();
+  const COL = { hn: cssVar("--hn"), yt: cssVar("--yt"), gem: cssVar("--gem"), quiet: cssVar("--quiet"),
+                text: cssVar("--text"), muted: cssVar("--muted"), line: cssVar("--line"), faint: cssVar("--faint") };
+  const rgba = (hex, a) => {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
+  };
+
+  function fit(canvas) {  // match the canvas to its CSS size at the screen's pixel density
+    const r = canvas.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, r.width * dpr); canvas.height = Math.max(1, r.height * dpr);
+    const ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, w: r.width, h: r.height };
+  }
+
+  /* ---------------- fusion core: two streams into one gem ---------------- */
+  const fusion = document.getElementById("fusion"), streams = document.getElementById("streams");
+  let S = null, flow = [], energy = 0;
+  function layoutStreams() {
+    S = fit(streams);
+    const f = fusion.getBoundingClientRect(),
+          a = document.getElementById("cardHn").getBoundingClientRect(),
+          b = document.getElementById("cardYt").getBoundingClientRect();
+    S.leftX = a.right - f.left; S.rightX = b.left - f.left;
+    S.cx = (S.leftX + S.rightX) / 2; S.cy = S.h * 0.42; S.top = a.top - f.top; S.bot = a.bottom - f.top;
+  }
+  function spawn() {
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const y = S.top + 20 + Math.random() * (S.bot - S.top - 40);
+    flow.push({ side, x: side < 0 ? S.leftX : S.rightX, y, px: null, py: null, t: 0,
+                speed: 0.55 + Math.random() * 0.5, wob: Math.random() * 6.28 });
+  }
+  function gemPath(ctx, x, y, s) {  // a cut-diamond outline
+    ctx.beginPath();
+    ctx.moveTo(x - s, y - s * 0.35); ctx.lineTo(x - s * 0.5, y - s * 0.8); ctx.lineTo(x + s * 0.5, y - s * 0.8);
+    ctx.lineTo(x + s, y - s * 0.35); ctx.lineTo(x, y + s); ctx.closePath();
+  }
+  function drawCore(t) {
+    const { ctx, w, h, cx, cy } = S;
+    ctx.clearRect(0, 0, w, h);
+    if (S.rightX - S.leftX < 60) return;
+    // streams
+    for (const p of flow) {
+      p.t += 0.006 * p.speed;
+      const e = 1 - Math.pow(1 - Math.min(p.t, 1), 2);
+      const sx = p.side < 0 ? S.leftX : S.rightX;
+      const x = sx + (cx - sx) * e, y = p.y + (cy - p.y) * e + Math.sin(p.wob + t * 0.004) * 4 * (1 - e);
+      const c = p.side < 0 ? COL.hn : COL.yt;
+      if (p.px !== null) {
+        ctx.strokeStyle = rgba(c, 0.25 + 0.6 * e); ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(p.px, p.py); ctx.lineTo(x, y); ctx.stroke();
+      }
+      ctx.fillStyle = rgba(c, 0.9); ctx.beginPath(); ctx.arc(x, y, 1.6, 0, 6.28); ctx.fill();
+      p.px = x; p.py = y;
+      if (p.t >= 1) { p.dead = true; energy = Math.min(1, energy + 0.05); }
+    }
+    flow = flow.filter(p => !p.dead);
+    energy *= 0.985;
+    // rings
+    const rings = [[30, COL.hn, 1], [42, COL.gem, -0.7], [54, COL.yt, 0.5]];
+    for (const [r, c, dir] of rings) {
+      ctx.strokeStyle = rgba(c, 0.55); ctx.lineWidth = 1.2; ctx.setLineDash([6, 8]);
+      ctx.beginPath(); ctx.arc(cx, cy, r, t * 0.0007 * dir, t * 0.0007 * dir + 5.2); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    // gem
+    const s = 15 + energy * 3 + Math.sin(t * 0.003) * 0.8;
+    const g = ctx.createLinearGradient(cx - s, cy - s, cx + s, cy + s);
+    g.addColorStop(0, COL.hn); g.addColorStop(0.5, COL.gem); g.addColorStop(1, COL.yt);
+    ctx.shadowColor = COL.gem; ctx.shadowBlur = 18 + energy * 22;
+    gemPath(ctx, cx, cy, s); ctx.fillStyle = g; ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - s, cy - s * 0.35); ctx.lineTo(cx + s, cy - s * 0.35);
+    ctx.moveTo(cx - s * 0.5, cy - s * 0.8); ctx.lineTo(cx, cy + s); ctx.lineTo(cx + s * 0.5, cy - s * 0.8); ctx.stroke();
+  }
+
+  /* ---------------- the map ---------------- */
+  const ZONES = {
+    gems: { x0: 0, x1: .5, y0: 0, y1: .5, color: "gem", k: "HIGH HN · LOW VIEWS", title: "Hidden gems",
+      l1: "Hacker News keeps recommending it. Few people have watched it.",
+      l2: "What this app hunts for: talks experts value that the algorithm never pushed.",
+      w: "In the app: <b>Hidden gems</b> tab." },
+    classics: { x0: .5, x1: 1, y0: 0, y1: .5, color: "text", k: "HIGH HN · HIGH VIEWS", title: "Shared classics",
+      l1: "Hacker News loves it, and so does everyone else.",
+      l2: "Both signals agree. The famous talks you have probably already seen.",
+      w: "In the app: top right of <b>Popular vs remembered</b>." },
+    crowd: { x0: .5, x1: 1, y0: .5, y1: 1, color: "yt", k: "LOW HN · HIGH VIEWS", title: "Crowd hits",
+      l1: "Lots of views, but HN rarely brings it up.",
+      l2: "Popular with the crowd, yet not what engineers keep pointing each other to.",
+      w: "In the app: bottom right of <b>Popular vs remembered</b>." },
+    quiet: { x0: 0, x1: .5, y0: .5, y1: 1, color: "quiet", k: "LOW HN · LOW VIEWS", title: "Quiet corner",
+      l1: "Few views and few HN mentions.",
+      l2: "Most videos live here. The app leaves them out by asking for a minimum number of HN recommenders.",
+      w: "In the app: the <b>At least this many HN recommenders</b> slider." },
+    pairs: { color: "hn", k: "SAME HN LOVE · DIFFERENT AUDIENCES", title: "Same praise, different reach",
+      l1: "Two videos with the same number of HN recommenders.",
+      l2: "One has a huge audience, the other almost none. Same praise, very different reach.",
+      w: "In the app: <b>Same praise, different reach</b> tab (the one the app opens on)." },
+  };
+  const plot = document.getElementById("plot"), mapCanvas = document.getElementById("map");
+  let M = null, dots = [], pinned = "gems", active = "gems", fade = {};
+  const PAD = { l: 30, r: 8, t: 8, b: 26 };
+  const share = { gems: .22, classics: .14, crowd: .22, quiet: .42 };
+
+  function seedDots(n) {
+    dots = [];
+    for (const [z, f] of Object.entries(share)) {
+      for (let i = 0; i < Math.round(n * f); i++) {
+        const Z = ZONES[z];
+        dots.push({ z, x: Z.x0 + .05 + Math.random() * (Z.x1 - Z.x0 - .1), y: Z.y0 + .05 + Math.random() * (Z.y1 - Z.y0 - .1),
+                    vx: (Math.random() - .5) * .00012, vy: (Math.random() - .5) * .00012,
+                    r: z === "gems" ? 2.6 : 1.4 + Math.random() * 1.6, ph: Math.random() * 6.28 });
+      }
+    }
+  }
+  const px = x => PAD.l + x * (M.w - PAD.l - PAD.r);
+  const py = y => PAD.t + y * (M.h - PAD.t - PAD.b);
+
+  function brackets(ctx, x0, y0, x1, y1, c) {
+    const L = 12; ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(x0, y0 + L); ctx.lineTo(x0, y0); ctx.lineTo(x0 + L, y0);
+    ctx.moveTo(x1 - L, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y0 + L);
+    ctx.moveTo(x1, y1 - L); ctx.lineTo(x1, y1); ctx.lineTo(x1 - L, y1);
+    ctx.moveTo(x0 + L, y1); ctx.lineTo(x0, y1); ctx.lineTo(x0, y1 - L); ctx.stroke();
+  }
+
+  function drawMap(t, dt) {
+    const { ctx, w, h } = M;
+    ctx.clearRect(0, 0, w, h);
+    const X0 = px(0), X1 = px(1), Y0 = py(0), Y1 = py(1);
+    // grid
+    ctx.strokeStyle = COL.line; ctx.lineWidth = 1;
+    for (let i = 1; i < 10; i++) {
+      ctx.beginPath(); ctx.moveTo(px(i / 10), Y0); ctx.lineTo(px(i / 10), Y1);
+      ctx.moveTo(X0, py(i / 10)); ctx.lineTo(X1, py(i / 10)); ctx.stroke();
+    }
+    // zone fades
+    for (const z of ["gems", "classics", "crowd", "quiet"]) {
+      const target = active === z ? 1 : 0;
+      fade[z] = (fade[z] ?? target) + (target - (fade[z] ?? target)) * Math.min(1, dt * 0.008);
+      const Z = ZONES[z], c = COL[Z.color];
+      if (fade[z] > 0.01) {
+        ctx.fillStyle = rgba(c, 0.07 * fade[z]); ctx.fillRect(px(Z.x0), py(Z.y0), px(Z.x1) - px(Z.x0), py(Z.y1) - py(Z.y0));
+        brackets(ctx, px(Z.x0) + 4, py(Z.y0) + 4, px(Z.x1) - 4, py(Z.y1) - 4, rgba(c, 0.8 * fade[z]));
+      }
+      ctx.font = "600 10.5px ui-monospace, Consolas, monospace";
+      ctx.fillStyle = rgba(c, active === z ? 0.95 : 0.4);
+      ctx.textAlign = Z.x0 === 0 ? "left" : "right";
+      ctx.fillText(Z.title.toUpperCase(), Z.x0 === 0 ? px(0) + 12 : px(1) - 12, Z.y0 === 0 ? py(0) + 22 : py(1) - 12);
+    }
+    // midlines
+    ctx.setLineDash([3, 5]); ctx.strokeStyle = COL.faint; ctx.beginPath();
+    ctx.moveTo(px(.5), Y0); ctx.lineTo(px(.5), Y1); ctx.moveTo(X0, py(.5)); ctx.lineTo(X1, py(.5)); ctx.stroke();
+    ctx.setLineDash([]);
+    // axes
+    ctx.strokeStyle = COL.muted; ctx.lineWidth = 1.2; ctx.beginPath();
+    ctx.moveTo(X0, Y0 - 2); ctx.lineTo(X0, Y1); ctx.lineTo(X1 + 2, Y1); ctx.stroke();
+    ctx.fillStyle = COL.muted; ctx.beginPath(); ctx.moveTo(X0, Y0 - 6); ctx.lineTo(X0 - 4, Y0 + 2); ctx.lineTo(X0 + 4, Y0 + 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(X1 + 6, Y1); ctx.lineTo(X1 - 2, Y1 - 4); ctx.lineTo(X1 - 2, Y1 + 4); ctx.fill();
+    ctx.font = "12px system-ui, sans-serif"; ctx.textAlign = "right"; ctx.fillStyle = COL.yt;
+    ctx.fillText("YouTube views  →", X1, Y1 + 18);
+    ctx.save(); ctx.translate(X0 - 12, Y0); ctx.rotate(-Math.PI / 2); ctx.textAlign = "right"; ctx.fillStyle = COL.hn;
+    ctx.fillText("HN recommenders  →", 0, 0); ctx.restore();
+    // scan line
+    const scan = (t * 0.00012) % 1.25;
+    if (!reduce && scan <= 1) {
+      const sx = px(scan), g = ctx.createLinearGradient(sx - 40, 0, sx, 0);
+      g.addColorStop(0, rgba(COL.gem, 0)); g.addColorStop(1, rgba(COL.gem, 0.16));
+      ctx.fillStyle = g; ctx.fillRect(sx - 40, Y0, 40, Y1 - Y0);
+    }
+    // dots
+    for (const d of dots) {
+      const Z = ZONES[d.z];
+      if (!reduce) {
+        d.x += d.vx * dt; d.y += d.vy * dt;
+        if (d.x < Z.x0 + .03 || d.x > Z.x1 - .03) d.vx *= -1;
+        if (d.y < Z.y0 + .03 || d.y > Z.y1 - .03) d.vy *= -1;
+      }
+      const on = active === d.z;
+      const lit = !reduce && scan <= 1 && Math.abs(d.x - scan) < .03;
+      const c = COL[Z.color];
+      const a = (active === "pairs" ? 0.3 : on ? 0.95 : 0.28) + (lit ? 0.4 : 0);
+      if (d.z === "gems" && on) { ctx.shadowColor = c; ctx.shadowBlur = 10 + 4 * Math.sin(t * 0.004 + d.ph); }
+      ctx.fillStyle = rgba(c, Math.min(1, a));
+      ctx.beginPath(); ctx.arc(px(d.x), py(d.y), d.r + (on && d.z === "gems" ? 0.6 : 0), 0, 6.28); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    if (active === "pairs") drawPairs(t);
+  }
+
+  function drawPairs(t) {
+    const { ctx } = M, y = py(.28), a = px(.1), b = px(.88), pulse = 1 + 0.25 * Math.sin(t * 0.005);
+    ctx.setLineDash([5, 5]); ctx.strokeStyle = rgba(COL.hn, 0.85); ctx.lineWidth = 1.5;
+    ctx.lineDashOffset = -t * 0.02; ctx.beginPath(); ctx.moveTo(a, y); ctx.lineTo(b, y); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    for (const [x, c, r, label] of [[a, COL.gem, 4, "few views"], [b, COL.text, 7, "many views"]]) {
+      ctx.shadowColor = c; ctx.shadowBlur = 14; ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(x, y, r * pulse, 0, 6.28); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.font = "12px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = COL.muted;
+      ctx.fillText(label, x, y + 24);
+    }
+    ctx.textAlign = "center"; ctx.fillStyle = COL.hn; ctx.fillText("same number of HN recommenders", (a + b) / 2, y - 10);
+  }
+
+  /* ---------------- readout + interaction ---------------- */
+  const chips = [...document.querySelectorAll(".chip")];
+  function show(z) {
+    active = z; const Z = ZONES[z], c = COL[Z.color];
+    const ro = document.getElementById("readout"); ro.style.setProperty("--zc", c);
+    document.getElementById("rk").textContent = Z.k; document.getElementById("rt").textContent = Z.title;
+    document.getElementById("r1").textContent = Z.l1; document.getElementById("r2").textContent = Z.l2;
+    document.getElementById("rw").innerHTML = Z.w;
+    chips.forEach(ch => { ch.style.setProperty("--zc", COL[ZONES[ch.dataset.zone].color]);
+                          ch.setAttribute("aria-pressed", ch.dataset.zone === pinned); });
+    if (reduce && M) drawMap(0, 0);
+  }
+  function zoneAt(e) {
+    const r = mapCanvas.getBoundingClientRect();
+    const x = (e.clientX - r.left - PAD.l) / (r.width - PAD.l - PAD.r), y = (e.clientY - r.top - PAD.t) / (r.height - PAD.t - PAD.b);
+    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+    return (y < .5 ? (x < .5 ? "gems" : "classics") : (x < .5 ? "quiet" : "crowd"));
+  }
+  plot.addEventListener("mousemove", e => { const z = zoneAt(e); if (z && z !== active) show(z); });
+  plot.addEventListener("mouseleave", () => show(pinned));
+  plot.addEventListener("click", e => { const z = zoneAt(e); if (z) { pinned = z; show(z); } });
+  chips.forEach(ch => ch.addEventListener("click", () => { pinned = ch.dataset.zone; show(pinned); }));
+
+  /* ---------------- loop ---------------- */
+  function layout() { layoutStreams(); M = fit(mapCanvas); if (!dots.length) seedDots(Math.round(Math.max(60, M.w / 6))); }
+  new ResizeObserver(() => { layout(); if (reduce) { drawCore(0); drawMap(0, 0); } }).observe(document.body);
+  layout(); show("gems");
+
+  let last = performance.now(), acc = 0;
+  function frame(t) {
+    const dt = Math.min(50, t - last); last = t;
+    acc += dt; while (acc > 45) { if (S && S.rightX - S.leftX > 60) spawn(); acc -= 45; }
+    drawCore(t); drawMap(t, dt);
+    requestAnimationFrame(frame);
+  }
+  if (reduce) { drawCore(0); drawMap(0, 0); } else requestAnimationFrame(frame);
+
+  // Grow the frame (and Streamlit's box around it) to fit, so the page scrolls instead of this box.
+  const resize = () => { try { if (frameElement) { const h = document.documentElement.scrollHeight + "px"; frameElement.style.height = h; frameElement.parentElement.style.height = h; } } catch (e) {} };
+  new ResizeObserver(resize).observe(document.body); resize();
+})();
+</script>
+</body>
+</html>
