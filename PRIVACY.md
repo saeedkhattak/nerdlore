@@ -14,6 +14,9 @@ covered by the [Google Privacy Policy](https://policies.google.com/privacy).
   account sign-in, no watch history. Video thumbnails load straight from YouTube's image
   server, as they would on any page that shows YouTube videos.
 - **HackerTube's public data export,** which you upload.
+- **In demo mode, nothing from YouTube.** The view counts and upload dates are made up on your
+  computer, labelled as made up on every page, and never saved. The built-in sample is a small
+  part of HackerTube's public data that ships with the app.
 
 **What it stores**
 

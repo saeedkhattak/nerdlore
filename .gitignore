@@ -7,6 +7,8 @@ __pycache__/
 # Data: never commit HackerTube exports or anything fetched from YouTube
 data/
 *.zip
+# ...except the demo's small sample of HackerTube data (ODC-By 1.0)
+!nerdlore/sample_data/hackertube-sample.zip
 *.jsonl
 *.npy
 youtube_meta*

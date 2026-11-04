@@ -59,6 +59,11 @@ streamlit run app.py
 Then upload [`hackertube-data.zip`](https://hackertube.org/data) in the sidebar, paste your key
 and press **Run analysis**. New to any of this? Follow the steps below.
 
+> **Just want to look around first?** Start the app and press **Try the demo**. You don't need a
+> key or the zip: every page opens with **made-up view counts** on a small built-in sample of
+> HackerTube's data. The app labels every number as made up while demo mode is on, and nothing
+> is saved.
+
 ---
 
 ## 🧰 Before you start
@@ -73,7 +78,8 @@ You need four things. Only the last two take more than a minute.
 | **The HackerTube data file** | The list of videos HN recommended | Download `hackertube-data.zip` (about 18 MB) from [hackertube.org/data](https://hackertube.org/data) |
 
 No database, no server, no sign-up with this project, and no paid services. The YouTube key
-is free: the daily free quota is far more than NerdLore needs.
+is free: the daily free quota is far more than NerdLore needs. You only need the key and the
+zip for real view counts: **Try the demo** works with Python alone.
 
 ---
 
@@ -160,6 +166,9 @@ Your browser opens at **http://localhost:8501**. If it doesn't, open that addres
 To stop the app, press `Ctrl+C` in the terminal.
 
 ### 4. Your first run
+
+**No key yet?** Press **Try the demo** (on the start page or in the sidebar) to explore every page
+with made-up view counts. When you're ready for real numbers:
 
 1. **Get the data.** In the sidebar, press **Get the zip from hackertube.org** and download
    `hackertube-data.zip`.
@@ -287,6 +296,11 @@ you store.
 Next time, just run `streamlit run app.py` again (with the virtual environment active). Your
 last results come back without spending any quota, until they are 30 days old.
 
+To start fresh at any time, press **Home** or click the **NerdLore** name. You get the start
+page with the **Try the demo** button again. Your real results stay saved, and **Back to your
+results** takes you straight back to them. In demo mode, a bright **DEMO MODE · Exit** button
+sits next to Home, so you always know the numbers are made up.
+
 ---
 
 ## ✨ What you get
@@ -363,8 +377,8 @@ Full details: [PRIVACY.md](PRIVACY.md).
 | In the repo | Not in the repo, on purpose |
 |---|---|
 | The app's code, tests, docs and demo media | **Any API key.** Each person uses their own |
-| Small made-up data used by the tests | **YouTube view counts.** YouTube's API policies only allow keeping them for 30 days, and only for the person who fetched them |
-| | **HackerTube's data.** It is open data (ODC-By 1.0), but it is updated regularly and is about 18 MB, so everyone downloads the current copy from [hackertube.org/data](https://hackertube.org/data) |
+| Small made-up data used by the tests | **Real YouTube view counts.** YouTube's API policies only allow keeping them for 30 days, and only for the person who fetched them. Demo mode makes its own numbers up instead |
+| A **small sample of HackerTube's data** for demo mode (628 videos, under 1 MB, ODC-By 1.0, credited in the zip's `NOTICE.md`) | **HackerTube's full data.** It is updated regularly and is about 18 MB, so everyone downloads the current copy from [hackertube.org/data](https://hackertube.org/data) |
 
 ---
 
@@ -410,6 +424,9 @@ nerdlore/analysis.py     filters and selections (no metrics made from YouTube da
 nerdlore/charts.py       fills the interactive pages with data
 nerdlore/*.html          the interactive pages (plain HTML, CSS and canvas; no libraries)
 nerdlore/local_store.py  saves your key, the zip and view counts in ~/.nerdlore
+nerdlore/demo.py         demo mode: made-up view counts and "made-up views" labels
+nerdlore/sample_data/    the small HackerTube sample demo mode uses
+scripts/make_demo_sample.py  rebuilds that sample from a newer hackertube-data.zip
 tests/                   tests with small made-up data; no network, no key needed
 docs/                    API key guide, images and the demo clip
 PRIVACY.md               privacy notice shown in the app
@@ -455,6 +472,13 @@ The video list, recommender counts, scores and labels come from
 (Hacker News data by Y Combinator), and licensed under
 [ODC-By 1.0](https://opendatacommons.org/licenses/by/1-0/). HN comments remain the work of
 their authors. HackerTube's labels were written by an LLM, so expect a few percent of noise.
+The demo's sample in `nerdlore/sample_data/` is a subset of that export (video rows unchanged;
+mention rows trimmed to the fields the app reads, without usernames or full comments), shared
+under the same licence with the credit in its `NOTICE.md`.
+
+**Demo mode** shows numbers that are made up on your computer, never fetched from YouTube. Every
+page labels them "made-up views" while it is on, they are never saved, and pressing **Run
+analysis** with a key replaces them with real counts.
 
 ## 📄 License
 
