@@ -12,6 +12,11 @@
   <img src="https://img.shields.io/badge/Runs-on%20your%20computer-3dd6ff.svg" alt="Runs on your computer">
 </p>
 
+<h3 align="center">
+  ▶ <a href="https://nerdlore.streamlit.app">Try it live: nerdlore.streamlit.app</a>
+</h3>
+<p align="center"><sub>Press <b>Try the demo</b>. No install, no key. If it says it has gone to sleep, click the button and wait about 30 seconds.</sub></p>
+
 <p align="center">
   <a href="docs/media/nerdlore-demo.mp4">
     <img src="docs/media/nerdlore-preview.gif" alt="NerdLore in action: the zone map, the same-praise pairs and the trusted channels explorer" width="820">
