@@ -8,6 +8,7 @@
   <a href="https://streamlit.io"><img src="https://img.shields.io/badge/Streamlit-1.50%2B-FF4B4B.svg?logo=streamlit&logoColor=white" alt="Streamlit 1.50+"></a>
   <a href="https://github.com/saeedkhattak/nerdlore/actions/workflows/tests.yml"><img src="https://github.com/saeedkhattak/nerdlore/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
   <a href="https://opendatacommons.org/licenses/by/1-0/"><img src="https://img.shields.io/badge/Data-HackerTube%20%C2%B7%20ODC--By%201.0-a78bfa.svg" alt="Data: HackerTube, ODC-By 1.0"></a>
+  <a href="https://nerdlore.streamlit.app"><img src="https://img.shields.io/badge/Try%20it-nerdlore.streamlit.app-FF4B4B.svg?logo=streamlit&logoColor=white" alt="Try it live: nerdlore.streamlit.app"></a>
   <img src="https://img.shields.io/badge/Runs-on%20your%20computer-3dd6ff.svg" alt="Runs on your computer">
 </p>
 
@@ -48,7 +49,11 @@ algorithm never pushed: the ones that are *loved by Hacker News, missed by every
 
 ## ⚡ Quick start
 
-Already have Python and a YouTube API key? Three commands:
+**Just want to look?** Open **[nerdlore.streamlit.app](https://nerdlore.streamlit.app)** and press
+**Try the demo**. No install and no key needed. If it says the app has gone to sleep, click the
+button to wake it and wait about 30 seconds.
+
+To run it yourself: already have Python and a YouTube API key? Three commands:
 
 ```bash
 git clone https://github.com/saeedkhattak/nerdlore.git && cd nerdlore
@@ -276,10 +281,7 @@ To update later: `git pull`, `.venv/bin/pip install -r requirements.txt`, then
 ### Option 3: Streamlit Community Cloud (free hosting)
 
 1. Fork this repo on GitHub.
-2. In your fork, delete the `address = "localhost"` line from
-   [`.streamlit/config.toml`](.streamlit/config.toml). It is only there to keep copies on
-   personal computers private, and the hosting service sets its own address.
-3. Sign in at [share.streamlit.io](https://share.streamlit.io) with GitHub, choose
+2. Sign in at [share.streamlit.io](https://share.streamlit.io) with GitHub, choose
    **Create app**, pick your fork, branch `main` and file `app.py`, then **Deploy**.
 
 Community Cloud apps are public by default. You can limit who can open yours in the app's
